@@ -1,0 +1,14 @@
+{
+  "name": "ambar-serial",
+  "version": "0.0.1",
+  "description": "AMBAR Serial Extension für Calliope mini",
+  "license": "MIT",
+  "public": true,
+  "dependencies": {
+    "core": "*"
+  },
+  "files": [
+    "main.ts",
+    "README.md"
+  ]
+}
