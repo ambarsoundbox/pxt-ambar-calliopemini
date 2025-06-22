@@ -4,8 +4,8 @@ namespace AMBAR {
      * @param value die Zahl, die gesendet werden soll
      * @param channel der Kanal (A-E) über den gesendet wird
      */
-    //% block="sende Zahl %value an Kanal %channel"
-    //% value.min=0 value.max=1000
+    //% block="sende Zahl %value an AMBAR auf den Kanal %channel"
+    //% value.min=0 value.max=20000
     //% color=#cd7f32 weight=100
     export function sendNumber(value: number, channel: Channel): void {
         serial.setBaudRate(BaudRate.BaudRate57600)  // Baudrate auf 57600 setzen:contentReference[oaicite:0]{index=0}
@@ -18,7 +18,7 @@ namespace AMBAR {
      * Ruft die bereitgestellte Funktion auf und übergibt die empfangene Zahl.
      * @param handler Funktion, die bei Empfang einer Zahl aufgerufen wird
      */
-    //% block="wenn serielle Zahl von AMBAR empfangen"
+    //% block="wenn Zahl von AMBAR empfangen"
     //% draggableParameters="reporter"
     //% color=#cd7f32 weight=90
     export function onSerialReceived(handler: (value: number) => void): void {
