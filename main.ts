@@ -44,23 +44,26 @@ namespace AMBAR {
      * @param key die Tonart
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (version 2) an Kanal %channel Taktart %timeSignature Tempo %tempo Tonart %key Noten %notes"
+    //% block="ABC-Notation an Kanal %channel Taktart %timeSignature Tempo %tempo Tonart %key Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|"
     //% color=#cd7f32 weight=80
     export function playABCNotation(channel: Channel, timeSignature: TimeSignature, tempo: number, key: Key, notes: string): void {
         serial.setBaudRate(BaudRate.BaudRate57600)
         
-        // Bereche die Grundnotenlänge basierend auf Tempo (in ms)
+        // Berechne die Grundnotenlänge basierend auf Tempo (in ms)
         let beatDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
         
         // Parse und spiele Noten mit Tonart-Anpassung
-        parseAndPlayNotes(notes, beatDuration, channel, key)
+        parseAndPlayNotes(notes, beatDuration, channel, key, timeSignature)
     }
 
     // Hilfsfunktion: Parse und spiele die Noten
-    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel): void {
+    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel, key: Key, timeSignature: TimeSignature): void {
         let i = 0
+        // Anpassung der Grundnotenlänge basierend auf Taktart
+        let baseDuration = calculateBaseDuration(beatDuration, timeSignature)
+        
         while (i < noteString.length) {
             let char = noteString.charAt(i)
             
@@ -117,9 +120,9 @@ namespace AMBAR {
                     }
                 }
                 
-                // Frequenz berechnen und senden
-                let frequency = noteToFrequency(noteName.charAt(0), octave)
-                let noteDuration = Math.round(beatDuration * duration)
+                // Frequenz berechnen mit Tonart-Anpassung und senden
+                let frequency = noteToFrequencyWithKey(noteName, octave, key)
+                let noteDuration = Math.round(baseDuration * duration)
                 
                 sendNumber(frequency, channel)
                 basic.pause(noteDuration)
@@ -132,11 +135,34 @@ namespace AMBAR {
         }
     }
 
-    // Hilfsfunktion: Wandle Notennamen in Frequenz um
-    function noteToFrequency(note: string, octave: number): number {
+    // Hilfsfunktion: Berechne Basis-Notendauer basierend auf Taktart
+    function calculateBaseDuration(beatDuration: number, timeSignature: TimeSignature): number {
+        switch (timeSignature) {
+            case TimeSignature.FourFour:
+                return beatDuration  // 4/4 Takt - Viertelnote als Basis
+            case TimeSignature.ThreeFour:
+                return beatDuration  // 3/4 Takt - Viertelnote als Basis
+            case TimeSignature.TwoFour:
+                return beatDuration  // 2/4 Takt - Viertelnote als Basis
+            case TimeSignature.SixEight:
+                return beatDuration / 2  // 6/8 Takt - Achtelnote als Basis
+            case TimeSignature.NineEight:
+                return beatDuration / 2  // 9/8 Takt - Achtelnote als Basis
+            case TimeSignature.TwelveEight:
+                return beatDuration / 2  // 12/8 Takt - Achtelnote als Basis
+            default:
+                return beatDuration
+        }
+    }
+
+    // Hilfsfunktion: Wandle Notennamen in Frequenz um mit Tonart-Anpassung
+    function noteToFrequencyWithKey(noteName: string, octave: number, key: Key): number {
+        let baseNote = noteName.charAt(0).toUpperCase()
+        let accidental = noteName.length > 1 ? noteName.charAt(1) : ''
+        
         // Grundfrequenzen für Oktave 4 (mittleres C = C4)
         let baseFreq: number
-        switch (note.toUpperCase()) {
+        switch (baseNote) {
             case 'C': baseFreq = 261.63; break
             case 'D': baseFreq = 293.66; break
             case 'E': baseFreq = 329.63; break
@@ -147,9 +173,62 @@ namespace AMBAR {
             default: return 0
         }
         
+        // Vorzeichen anwenden
+        if (accidental == '#') {
+            baseFreq *= 1.059463  // Halbton höher
+        } else if (accidental == 'b') {
+            baseFreq /= 1.059463  // Halbton tiefer
+        }
+        
+        // Tonart-Anpassung anwenden
+        baseFreq = applyKeySignature(baseNote, baseFreq, key)
+        
         // Oktave anpassen (jede Oktave verdoppelt/halbiert die Frequenz)
         let octaveMultiplier = Math.pow(2, octave - 4)
         return Math.round(baseFreq * octaveMultiplier)
+    }
+
+    // Hilfsfunktion: Wende Tonart-Vorzeichen an
+    function applyKeySignature(note: string, frequency: number, key: Key): number {
+        let keySignatures = getKeySignature(key)
+        
+        // Prüfe ob die Note von der Tonart betroffen ist
+        for (let i = 0; i < keySignatures.length; i++) {
+            if (keySignatures.charAt(i) == note) {
+                if (isSharpKey(key)) {
+                    return frequency * 1.059463  // Kreuz
+                } else {
+                    return frequency / 1.059463  // Be
+                }
+            }
+        }
+        
+        return frequency
+    }
+
+    // Hilfsfunktion: Erhalte die betroffenen Noten einer Tonart
+    function getKeySignature(key: Key): string {
+        switch (key) {
+            case Key.C: return ""
+            case Key.G: return "F"
+            case Key.D: return "FC"
+            case Key.A: return "FCG"
+            case Key.E: return "FCGD"
+            case Key.B: return "FCGDA"
+            case Key.FSharp: return "FCGDAE"
+            case Key.F: return "B"
+            case Key.BFlat: return "BE"
+            case Key.EFlat: return "BEA"
+            case Key.AFlat: return "BEAD"
+            case Key.DFlat: return "BEADG"
+            case Key.GFlat: return "BEADGC"
+            default: return ""
+        }
+    }
+
+    // Hilfsfunktion: Prüfe ob Tonart Kreuz-Tonart ist
+    function isSharpKey(key: Key): boolean {
+        return key == Key.G || key == Key.D || key == Key.A || key == Key.E || key == Key.B || key == Key.FSharp
     }
 
     // Hilfsfunktion: Wandle Channel-Enum in entsprechenden Buchstaben um
@@ -172,5 +251,55 @@ namespace AMBAR {
       D,
       //% block="E"
       E
+    }
+
+    /**
+     * Aufzählungstyp für Taktarten
+     */
+    export enum TimeSignature {
+        //% block="4/4"
+        FourFour,
+        //% block="3/4"
+        ThreeFour,
+        //% block="2/4"
+        TwoFour,
+        //% block="6/8"
+        SixEight,
+        //% block="9/8"
+        NineEight,
+        //% block="12/8"
+        TwelveEight
+    }
+
+    /**
+     * Aufzählungstyp für Tonarten
+     */
+    export enum Key {
+        //% block="C-Dur"
+        C,
+        //% block="G-Dur"
+        G,
+        //% block="D-Dur"
+        D,
+        //% block="A-Dur"
+        A,
+        //% block="E-Dur"
+        E,
+        //% block="H-Dur"
+        B,
+        //% block="Fis-Dur"
+        FSharp,
+        //% block="F-Dur"
+        F,
+        //% block="B-Dur"
+        BFlat,
+        //% block="Es-Dur"
+        EFlat,
+        //% block="As-Dur"
+        AFlat,
+        //% block="Des-Dur"
+        DFlat,
+        //% block="Ges-Dur"
+        GFlat
     }
 }
