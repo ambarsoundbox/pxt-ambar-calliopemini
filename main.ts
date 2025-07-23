@@ -1,9 +1,3 @@
-/**
- * AMBAR Bibliothek für Calliope mini
- * Version: v15
- * Erweitert um ABC-Notation Block für Musikwiedergabe
- */
-
 namespace AMBAR {
     /**
      * Sende eine Zahl über die serielle Schnittstelle im AMBAR-Format.
@@ -47,27 +41,30 @@ namespace AMBAR {
      * @param channel der Kanal (A-E) über den gesendet wird
      * @param timeSignature die Taktart
      * @param key die Tonart
+     * @param noteLength die Standard-Notenlänge
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation an Kanal %channel Taktart %timeSignature Tonart %key Tempo %tempo Noten %notes"
+    //% block="ABC-Notation an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %noteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% key.defl=Key.G
-    //% notes.defl="GABc dedB c2ec B2dB A2F2 G4"
+    //% noteLength.defl=NoteLength.Quarter
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|\n  GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:|\n|:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|\n  g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
     //% notes.fieldEditor="textarea" notes.fieldOptions.rows=4 notes.fieldOptions.cols=50
     //% color=#cd7f32 weight=80
-    export function playABCNotation(channel: Channel, timeSignature: TimeSignature, key: Key, tempo: number, notes: string): void {
+    export function playABCNotation(channel: Channel, timeSignature: TimeSignature, key: Key, noteLength: NoteLength, tempo: number, notes: string): void {
         serial.setBaudRate(BaudRate.BaudRate57600)
         
-        // Bereche die Grundnotenlänge basierend auf Tempo (in ms)
-        let beatDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
+        // Bereche die Grundnotenlänge basierend auf Tempo und Standard-Notenlänge (in ms)
+        let baseDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
+        let standardDuration = baseDuration * getNoteLengthMultiplier(noteLength)
         
         // Parse und spiele Noten mit Tonart-Anpassung
-        parseAndPlayNotes(notes, beatDuration, channel, key)
+        parseAndPlayNotes(notes, standardDuration, channel, key, noteLength)
     }
 
     // Hilfsfunktion: Parse und spiele die Noten
-    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel, key: Key): void {
+    function parseAndPlayNotes(noteString: string, standardDuration: number, channel: Channel, key: Key, noteLength: NoteLength): void {
         let i = 0
         while (i < noteString.length) {
             let char = noteString.charAt(i)
@@ -81,7 +78,7 @@ namespace AMBAR {
             // Note identifizieren
             let noteName = ''
             let octave = 0
-            let duration = 1  // Standard: Viertelnote
+            let duration = 1  // Standard: relativ zur gewählten Standard-Notenlänge
             
             // Notennamen erfassen (A-G, a-g)
             if ('ABCDEFGabcdefg'.indexOf(char) >= 0) {
@@ -111,7 +108,7 @@ namespace AMBAR {
                     i++
                 }
                 
-                // Notenlänge erfassen
+                // Notenlänge erfassen (relativ zur Standard-Notenlänge)
                 if (i < noteString.length && noteString.charAt(i) >= '0' && noteString.charAt(i) <= '9') {
                     duration = parseInt(noteString.charAt(i))
                     i++
@@ -127,7 +124,7 @@ namespace AMBAR {
                 
                 // Frequenz berechnen und senden (mit Tonart-Anpassung)
                 let frequency = noteToFrequency(noteName, octave, key)
-                let noteDuration = Math.round(beatDuration * duration)
+                let noteDuration = Math.round(standardDuration * duration)
                 
                 sendNumber(frequency, channel)
                 basic.pause(noteDuration)
@@ -137,6 +134,17 @@ namespace AMBAR {
             } else {
                 i++
             }
+        }
+    }
+
+    // Hilfsfunktion: Ermittle Multiplikator für Standard-Notenlänge
+    function getNoteLengthMultiplier(noteLength: NoteLength): number {
+        switch (noteLength) {
+            case NoteLength.Sixteenth: return 0.25  // 1/16 Note
+            case NoteLength.Eighth: return 0.5      // 1/8 Note  
+            case NoteLength.Quarter: return 1       // 1/4 Note (Standard)
+            case NoteLength.Half: return 2          // 1/2 Note
+            default: return 1
         }
     }
 
@@ -218,6 +226,20 @@ namespace AMBAR {
     function channelToLetter(ch: Channel): string {
         const letters = ["a", "b", "c", "d", "e"]
         return letters[ch] || "a"
+    }
+
+    /**
+     * Aufzählungstyp für Standard-Notenlängen
+     */
+    export enum NoteLength {
+      //% block="1/16"
+      Sixteenth,
+      //% block="1/8"
+      Eighth,
+      //% block="1/4"
+      Quarter,
+      //% block="1/2"
+      Half
     }
 
     /**
