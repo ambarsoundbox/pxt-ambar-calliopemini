@@ -45,12 +45,12 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v9) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v10) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
     //% defaultNoteLength.defl=DefaultNoteLength.Quarter
-    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|"
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:||:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
     //% color=#cd7f32 weight=80
     export function playABCNotation(channel: Channel, timeSignature: TimeSignature, key: Key, defaultNoteLength: DefaultNoteLength, tempo: number, notes: string): void {
         serial.setBaudRate(BaudRate.BaudRate57600)
