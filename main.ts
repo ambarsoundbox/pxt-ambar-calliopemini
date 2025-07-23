@@ -45,10 +45,10 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v7) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v9) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
-    //% key.defl=Key.C
+    //% key.defl=Key.G
     //% defaultNoteLength.defl=DefaultNoteLength.Quarter
     //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|"
     //% color=#cd7f32 weight=80
@@ -282,15 +282,15 @@ namespace AMBAR {
      * Aufzählungstyp für Standard-Notenlängen
      */
     export enum DefaultNoteLength {
-        //% block="1/16 (Sechzehntelnote)"
+        //% block="1/16"
         Sixteenth,
-        //% block="1/8 (Achtelnote)"
+        //% block="1/8"
         Eighth,
-        //% block="1/4 (Viertelnote)"
+        //% block="1/4"
         Quarter,
-        //% block="1/2 (halbe Note)"
+        //% block="1/2"
         Half,
-        //% block="1/1 (ganze Note)"
+        //% block="1/1"
         Whole
     }
 
