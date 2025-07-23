@@ -229,20 +229,6 @@ namespace AMBAR {
     }
 
     /**
-     * Aufzählungstyp für Standard-Notenlängen
-     */
-    export enum NoteLength {
-      //% block="1/16"
-      Sixteenth,
-      //% block="1/8"
-      Eighth,
-      //% block="1/4"
-      Quarter,
-      //% block="1/2"
-      Half
-    }
-
-    /**
      * Aufzählungstyp für die Kanäle A-E
      */
     export enum Channel {
