@@ -38,52 +38,34 @@ namespace AMBAR {
 
     /**
      * Spiele ABC-Notation ab und sende Frequenzen über WebSerial
-     * @param abcNotation die ABC-Notation als String
      * @param channel der Kanal (A-E) über den gesendet wird
+     * @param timeSignature die Taktart
+     * @param tempo das Tempo in BPM
+     * @param key die Tonart
+     * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation %abcNotation an Kanal %channel"
-    //% abcNotation.defl="X:1\nT:Test\nM:4/4\nK:C\nQ:120\nCDEF|"
+    //% block="ABC-Notation an Kanal %channel Taktart %timeSignature Tempo %tempo Tonart %key Noten %notes"
+    //% tempo.min=60 tempo.max=200 tempo.defl=120
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|"
     //% color=#cd7f32 weight=80
-    export function playABCNotation(abcNotation: string, channel: Channel): void {
+    export function playABCNotation(channel: Channel, timeSignature: TimeSignature, tempo: number, key: Key, notes: string): void {
         serial.setBaudRate(BaudRate.BaudRate57600)
-        
-        // Parse ABC-Notation
-        let tempo = 120  // Standard-Tempo
-        let notes: string[] = []
-        let lines = abcNotation.split('\n')
-        
-        // Header-Informationen extrahieren
-        for (let line of lines) {
-            line = line.trim()
-            if (line.startsWith('Q:')) {
-                tempo = parseInt(line.substr(2)) || 120
-            } else if (line.length > 0 && !line.startsWith('X:') && 
-                      !line.startsWith('T:') && !line.startsWith('M:') && 
-                      !line.startsWith('C:') && !line.startsWith('K:') && 
-                      !line.startsWith('Q:')) {
-                // Das sind die Noten-Zeilen
-                notes.push(line)
-            }
-        }
-        
-        // Alle Noten-Zeilen zusammenfügen
-        let noteString = notes.join('')
         
         // Bereche die Grundnotenlänge basierend auf Tempo (in ms)
         let beatDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
         
-        // Parse und spiele Noten
-        parseAndPlayNotes(noteString, beatDuration, channel)
+        // Parse und spiele Noten mit Tonart-Anpassung
+        parseAndPlayNotes(notes, beatDuration, channel, key)
     }
 
     // Hilfsfunktion: Parse und spiele die Noten
-    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel): void {
+    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel, key: Key): void {
         let i = 0
         while (i < noteString.length) {
             let char = noteString.charAt(i)
             
             // Überspringe Balken und andere Zeichen
-            if (char == '|' || char == ':' || char == ' ') {
+            if (char == '|' || char == ':' || char == ' ' || char == '\n' || char == '\r') {
                 i++
                 continue
             }
@@ -135,8 +117,8 @@ namespace AMBAR {
                     }
                 }
                 
-                // Frequenz berechnen und senden
-                let frequency = noteToFrequency(noteName.charAt(0), octave)
+                // Frequenz berechnen und senden (mit Tonart-Anpassung)
+                let frequency = noteToFrequency(noteName, octave, key)
                 let noteDuration = Math.round(beatDuration * duration)
                 
                 sendNumber(frequency, channel)
@@ -150,11 +132,15 @@ namespace AMBAR {
         }
     }
 
-    // Hilfsfunktion: Wandle Notennamen in Frequenz um
-    function noteToFrequency(note: string, octave: number): number {
-        // Grundfrequenzen für Oktave 4 (mittleres C = C4)
+    // Hilfsfunktion: Wandle Notennamen in Frequenz um (mit Tonart-Anpassung)
+    function noteToFrequency(noteName: string, octave: number, key: Key): number {
+        let baseNote = noteName.charAt(0).toUpperCase()
+        let hasSharp = noteName.indexOf('#') >= 0
+        let hasFlat = noteName.indexOf('b') >= 0
+        
+        // Grundfrequenzen für Oktave 4 (C4 = 261.63 Hz)
         let baseFreq: number
-        switch (note.toUpperCase()) {
+        switch (baseNote) {
             case 'C': baseFreq = 261.63; break
             case 'D': baseFreq = 293.66; break
             case 'E': baseFreq = 329.63; break
@@ -165,9 +151,59 @@ namespace AMBAR {
             default: return 0
         }
         
-        // Oktave anpassen (jede Oktave verdoppelt/halbiert die Frequenz)
+        // Vorzeichen anwenden
+        if (hasSharp) {
+            baseFreq *= 1.059463  // Halbton höher
+        } else if (hasFlat) {
+            baseFreq /= 1.059463  // Halbton tiefer
+        }
+        
+        // Tonart-Vorzeichen anwenden
+        let keyAdjustment = getKeyAdjustment(baseNote, key)
+        if (keyAdjustment != 0) {
+            if (keyAdjustment > 0) {
+                baseFreq *= Math.pow(1.059463, keyAdjustment)  // Kreuz
+            } else {
+                baseFreq /= Math.pow(1.059463, Math.abs(keyAdjustment))  // Be
+            }
+        }
+        
+        // Oktave anpassen
         let octaveMultiplier = Math.pow(2, octave - 4)
         return Math.round(baseFreq * octaveMultiplier)
+    }
+    
+    // Hilfsfunktion: Ermittle Tonart-Vorzeichen für eine Note
+    function getKeyAdjustment(note: string, key: Key): number {
+        // Rückgabe: 1 = Kreuz, -1 = Be, 0 = keine Änderung
+        switch (key) {
+            case Key.C: return 0  // Keine Vorzeichen
+            case Key.G: 
+                return note == 'F' ? 1 : 0  // F#
+            case Key.D:
+                return (note == 'F' || note == 'C') ? 1 : 0  // F#, C#
+            case Key.A:
+                return (note == 'F' || note == 'C' || note == 'G') ? 1 : 0  // F#, C#, G#
+            case Key.E:
+                return (note == 'F' || note == 'C' || note == 'G' || note == 'D') ? 1 : 0  // F#, C#, G#, D#
+            case Key.B:
+                return (note == 'F' || note == 'C' || note == 'G' || note == 'D' || note == 'A') ? 1 : 0
+            case Key.Fs:
+                return (note == 'F' || note == 'C' || note == 'G' || note == 'D' || note == 'A' || note == 'E') ? 1 : 0
+            case Key.F:
+                return note == 'B' ? -1 : 0  // Bb
+            case Key.Bb:
+                return (note == 'B' || note == 'E') ? -1 : 0  // Bb, Eb
+            case Key.Eb:
+                return (note == 'B' || note == 'E' || note == 'A') ? -1 : 0  // Bb, Eb, Ab
+            case Key.Ab:
+                return (note == 'B' || note == 'E' || note == 'A' || note == 'D') ? -1 : 0  // Bb, Eb, Ab, Db
+            case Key.Db:
+                return (note == 'B' || note == 'E' || note == 'A' || note == 'D' || note == 'G') ? -1 : 0
+            case Key.Gb:
+                return (note == 'B' || note == 'E' || note == 'A' || note == 'D' || note == 'G' || note == 'C') ? -1 : 0
+            default: return 0
+        }
     }
 
     // Hilfsfunktion: Wandle Channel-Enum in entsprechenden Buchstaben um
@@ -190,5 +226,59 @@ namespace AMBAR {
       D,
       //% block="E"
       E
+    }
+
+    /**
+     * Aufzählungstyp für Taktarten
+     */
+    export enum TimeSignature {
+      //% block="4/4"
+      FourFour,
+      //% block="3/4"
+      ThreeFour,
+      //% block="2/4"
+      TwoFour,
+      //% block="6/8"
+      SixEight,
+      //% block="9/8"
+      NineEight,
+      //% block="12/8"  
+      TwelveEight,
+      //% block="2/2"
+      TwoTwo,
+      //% block="3/8"
+      ThreeEight
+    }
+
+    /**
+     * Aufzählungstyp für Tonarten
+     */
+    export enum Key {
+      //% block="C-Dur"
+      C,
+      //% block="G-Dur"
+      G,
+      //% block="D-Dur"
+      D,
+      //% block="A-Dur"
+      A,
+      //% block="E-Dur"
+      E,
+      //% block="B-Dur"
+      B,
+      //% block="F#-Dur"
+      Fs,
+      //% block="F-Dur"
+      F,
+      //% block="Bb-Dur"
+      Bb,
+      //% block="Eb-Dur"
+      Eb,
+      //% block="Ab-Dur"
+      Ab,
+      //% block="Db-Dur"
+      Db,
+      //% block="Gb-Dur"
+      Gb
     }
 }
