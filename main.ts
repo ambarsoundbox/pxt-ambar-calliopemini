@@ -49,7 +49,7 @@ namespace AMBAR {
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% key.defl=Key.G
     //% noteLength.defl=NoteLength.Quarter
-    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|\n  GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:|\n|:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|\n  g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:|:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
     //% notes.fieldEditor="textarea" notes.fieldOptions.rows=4 notes.fieldOptions.cols=50
     //% color=#cd7f32 weight=80
     export function playABCNotation(channel: Channel, timeSignature: TimeSignature, key: Key, noteLength: NoteLength, tempo: number, notes: string): void {
