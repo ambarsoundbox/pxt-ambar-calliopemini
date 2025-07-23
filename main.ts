@@ -40,29 +40,36 @@ namespace AMBAR {
      * Spiele ABC-Notation ab und sende Frequenzen über WebSerial
      * @param channel der Kanal (A-E) über den gesendet wird
      * @param timeSignature die Taktart
-     * @param tempo das Tempo in BPM
      * @param key die Tonart
+     * @param defaultNoteLength die Standard-Notenlänge
+     * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (version 3) an Kanal %channel Taktart %timeSignature Tempo %tempo Tonart %key Noten %notes"
+    //% block="ABC-Notation (v7) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
-    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:||:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
+    //% timeSignature.defl=TimeSignature.FourFour
+    //% key.defl=Key.C
+    //% defaultNoteLength.defl=DefaultNoteLength.Quarter
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|"
     //% color=#cd7f32 weight=80
-    export function playABCNotation(channel: Channel, timeSignature: TimeSignature, tempo: number, key: Key, notes: string): void {
+    export function playABCNotation(channel: Channel, timeSignature: TimeSignature, key: Key, defaultNoteLength: DefaultNoteLength, tempo: number, notes: string): void {
         serial.setBaudRate(BaudRate.BaudRate57600)
         
         // Berechne die Grundnotenlänge basierend auf Tempo (in ms)
         let beatDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
         
         // Parse und spiele Noten mit Tonart-Anpassung
-        parseAndPlayNotes(notes, beatDuration, channel, key, timeSignature)
+        parseAndPlayNotes(notes, beatDuration, channel, key, timeSignature, defaultNoteLength)
     }
 
     // Hilfsfunktion: Parse und spiele die Noten
-    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel, key: Key, timeSignature: TimeSignature): void {
+    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel, key: Key, timeSignature: TimeSignature, defaultNoteLength: DefaultNoteLength): void {
         let i = 0
         // Anpassung der Grundnotenlänge basierend auf Taktart
         let baseDuration = calculateBaseDuration(beatDuration, timeSignature)
+        
+        // Berechne Standard-Notenlänge als Bruchteil einer Viertelnote
+        let baseNoteFraction = getDefaultNoteFraction(defaultNoteLength)
         
         while (i < noteString.length) {
             let char = noteString.charAt(i)
@@ -76,7 +83,7 @@ namespace AMBAR {
             // Note identifizieren
             let noteName = ''
             let octave = 0
-            let duration = 1  // Standard: Viertelnote
+            let duration = 1  // Standardmultiplikator (entspricht der gewählten Standard-Notenlänge)
             
             // Notennamen erfassen (A-G, a-g)
             if ('ABCDEFGabcdefg'.indexOf(char) >= 0) {
@@ -106,7 +113,7 @@ namespace AMBAR {
                     i++
                 }
                 
-                // Notenlänge erfassen
+                // Notenlänge erfassen (Multiplikator der Standard-Notenlänge)
                 if (i < noteString.length && noteString.charAt(i) >= '0' && noteString.charAt(i) <= '9') {
                     duration = parseInt(noteString.charAt(i))
                     i++
@@ -116,13 +123,13 @@ namespace AMBAR {
                         duration = 1 / parseInt(noteString.charAt(i))
                         i++
                     } else {
-                        duration = 0.5  // Halbe Note bei /
+                        duration = 0.5  // Halbe Standard-Notenlänge bei /
                     }
                 }
                 
                 // Frequenz berechnen mit Tonart-Anpassung und senden
                 let frequency = noteToFrequencyWithKey(noteName, octave, key)
-                let noteDuration = Math.round(baseDuration * duration)
+                let noteDuration = Math.round(baseDuration * baseNoteFraction * duration)
                 
                 sendNumber(frequency, channel)
                 basic.pause(noteDuration)
@@ -132,6 +139,24 @@ namespace AMBAR {
             } else {
                 i++
             }
+        }
+    }
+
+    // Hilfsfunktion: Erhalte Bruchteil einer Viertelnote für Standard-Notenlänge
+    function getDefaultNoteFraction(defaultNoteLength: DefaultNoteLength): number {
+        switch (defaultNoteLength) {
+            case DefaultNoteLength.Whole:
+                return 4        // Ganze Note = 4 Viertelnoten
+            case DefaultNoteLength.Half:
+                return 2        // Halbe Note = 2 Viertelnoten
+            case DefaultNoteLength.Quarter:
+                return 1        // Viertelnote = 1 Viertelnote
+            case DefaultNoteLength.Eighth:
+                return 0.5      // Achtelnote = 1/2 Viertelnote
+            case DefaultNoteLength.Sixteenth:
+                return 0.25     // Sechzehntelnote = 1/4 Viertelnote
+            default:
+                return 0.25     // Standard: Sechzehntelnote
         }
     }
 
@@ -251,6 +276,22 @@ namespace AMBAR {
       D,
       //% block="E"
       E
+    }
+
+    /**
+     * Aufzählungstyp für Standard-Notenlängen
+     */
+    export enum DefaultNoteLength {
+        //% block="1/16 (Sechzehntelnote)"
+        Sixteenth,
+        //% block="1/8 (Achtelnote)"
+        Eighth,
+        //% block="1/4 (Viertelnote)"
+        Quarter,
+        //% block="1/2 (halbe Note)"
+        Half,
+        //% block="1/1 (ganze Note)"
+        Whole
     }
 
     /**
