@@ -1,6 +1,6 @@
 {
   "name": "ambar-serial",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "AMBAR Serial Extension für Calliope mini",
   "license": "MIT",
   "public": true,
