@@ -8,7 +8,7 @@ namespace AMBAR {
     //% value.min=0 value.max=20000
     //% color=#cd7f32 weight=100
     export function sendNumber(value: number, channel: Channel): void {
-        serial.setBaudRate(BaudRate.BaudRate57600)  // Baudrate auf 57600 setzen:contentReference[oaicite:0]{index=0}
+        serial.setBaudRate(BaudRate.BaudRate57600)  // Baudrate auf 57600 setzen
         let chLetter = channelToLetter(channel)
         serial.writeString("s" + chLetter + value + "e")
     }
@@ -34,6 +34,140 @@ namespace AMBAR {
                 }
             }
         })
+    }
+
+    /**
+     * Spiele ABC-Notation ab und sende Frequenzen über WebSerial
+     * @param abcNotation die ABC-Notation als String
+     * @param channel der Kanal (A-E) über den gesendet wird
+     */
+    //% block="ABC-Notation %abcNotation an Kanal %channel"
+    //% abcNotation.defl="X:1\nT:Test\nM:4/4\nK:C\nQ:120\nCDEF|"
+    //% color=#cd7f32 weight=80
+    export function playABCNotation(abcNotation: string, channel: Channel): void {
+        serial.setBaudRate(BaudRate.BaudRate57600)
+        
+        // Parse ABC-Notation
+        let tempo = 120  // Standard-Tempo
+        let notes: string[] = []
+        let lines = abcNotation.split('\n')
+        
+        // Header-Informationen extrahieren
+        for (let line of lines) {
+            line = line.trim()
+            if (line.startsWith('Q:')) {
+                tempo = parseInt(line.substr(2)) || 120
+            } else if (line.length > 0 && !line.startsWith('X:') && 
+                      !line.startsWith('T:') && !line.startsWith('M:') && 
+                      !line.startsWith('C:') && !line.startsWith('K:') && 
+                      !line.startsWith('Q:')) {
+                // Das sind die Noten-Zeilen
+                notes.push(line)
+            }
+        }
+        
+        // Alle Noten-Zeilen zusammenfügen
+        let noteString = notes.join('')
+        
+        // Bereche die Grundnotenlänge basierend auf Tempo (in ms)
+        let beatDuration = 60000 / tempo  // Eine Viertelnote in Millisekunden
+        
+        // Parse und spiele Noten
+        parseAndPlayNotes(noteString, beatDuration, channel)
+    }
+
+    // Hilfsfunktion: Parse und spiele die Noten
+    function parseAndPlayNotes(noteString: string, beatDuration: number, channel: Channel): void {
+        let i = 0
+        while (i < noteString.length) {
+            let char = noteString.charAt(i)
+            
+            // Überspringe Balken und andere Zeichen
+            if (char == '|' || char == ':' || char == ' ') {
+                i++
+                continue
+            }
+            
+            // Note identifizieren
+            let noteName = ''
+            let octave = 0
+            let duration = 1  // Standard: Viertelnote
+            
+            // Notennamen erfassen (A-G, a-g)
+            if ('ABCDEFGabcdefg'.indexOf(char) >= 0) {
+                noteName = char
+                i++
+                
+                // Vorzeichen erfassen (# für Kreuz, b für Be)
+                if (i < noteString.length && (noteString.charAt(i) == '#' || noteString.charAt(i) == 'b')) {
+                    noteName += noteString.charAt(i)
+                    i++
+                }
+                
+                // Oktave bestimmen (große Buchstaben sind tiefere Oktave)
+                if (char >= 'A' && char <= 'G') {
+                    octave = 4  // Mittlere Oktave
+                } else {
+                    octave = 5  // Höhere Oktave für kleine Buchstaben
+                }
+                
+                // Zusätzliche Oktav-Markierungen
+                while (i < noteString.length && noteString.charAt(i) == '\'') {
+                    octave++
+                    i++
+                }
+                while (i < noteString.length && noteString.charAt(i) == ',') {
+                    octave--
+                    i++
+                }
+                
+                // Notenlänge erfassen
+                if (i < noteString.length && noteString.charAt(i) >= '0' && noteString.charAt(i) <= '9') {
+                    duration = parseInt(noteString.charAt(i))
+                    i++
+                } else if (i < noteString.length && noteString.charAt(i) == '/') {
+                    i++
+                    if (i < noteString.length && noteString.charAt(i) >= '0' && noteString.charAt(i) <= '9') {
+                        duration = 1 / parseInt(noteString.charAt(i))
+                        i++
+                    } else {
+                        duration = 0.5  // Halbe Note bei /
+                    }
+                }
+                
+                // Frequenz berechnen und senden
+                let frequency = noteToFrequency(noteName.charAt(0), octave)
+                let noteDuration = Math.round(beatDuration * duration)
+                
+                sendNumber(frequency, channel)
+                basic.pause(noteDuration)
+                sendNumber(0, channel)  // Kurze Pause zwischen Noten
+                basic.pause(50)
+                
+            } else {
+                i++
+            }
+        }
+    }
+
+    // Hilfsfunktion: Wandle Notennamen in Frequenz um
+    function noteToFrequency(note: string, octave: number): number {
+        // Grundfrequenzen für Oktave 4 (mittleres C = C4)
+        let baseFreq: number
+        switch (note.toUpperCase()) {
+            case 'C': baseFreq = 261.63; break
+            case 'D': baseFreq = 293.66; break
+            case 'E': baseFreq = 329.63; break
+            case 'F': baseFreq = 349.23; break
+            case 'G': baseFreq = 392.00; break
+            case 'A': baseFreq = 440.00; break
+            case 'B': baseFreq = 493.88; break
+            default: return 0
+        }
+        
+        // Oktave anpassen (jede Oktave verdoppelt/halbiert die Frequenz)
+        let octaveMultiplier = Math.pow(2, octave - 4)
+        return Math.round(baseFreq * octaveMultiplier)
     }
 
     // Hilfsfunktion: Wandle Channel-Enum in entsprechenden Buchstaben um
