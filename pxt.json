@@ -1,7 +1,7 @@
 {
   "name": "ambar-serial",
   "version": "0.1.1",
-  "description": "AMBAR Serial Extension für Calliope mini",
+  "description": "AMBAR-Bibliothek für den Calliope mini. Übertragung via Webserial",
   "license": "MIT",
   "public": true,
   "dependencies": {
