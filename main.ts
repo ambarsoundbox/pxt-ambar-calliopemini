@@ -38,6 +38,7 @@ namespace AMBAR {
 
     /**
      * Spiele ABC-Notation ab und sende Frequenzen über WebSerial
+     * Die Symbole ^, = und _ werden (vor einer Note) verwendet, um jeweils ein Kreuz (♯), ein Auflösungszeichen (♮) oder ein Be (♭) zu erzeugen.
      * @param channel der Kanal (A-E) über den gesendet wird
      * @param timeSignature die Taktart
      * @param key die Tonart
@@ -45,7 +46,7 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v10) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v11) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
@@ -84,15 +85,31 @@ namespace AMBAR {
             let noteName = ''
             let octave = 0
             let duration = 1  // Standardmultiplikator (entspricht der gewählten Standard-Notenlänge)
+            let accidental = ''  // Für explizite Vorzeichen (^, =, _)
+            
+            // Prüfe auf explizite Vorzeichen vor der Note
+            if (char == '^') {
+                accidental = '#'  // Kreuz
+                i++
+                char = noteString.charAt(i)
+            } else if (char == '=') {
+                accidental = '='  // Auflösungszeichen
+                i++
+                char = noteString.charAt(i)
+            } else if (char == '_') {
+                accidental = 'b'  // Be
+                i++
+                char = noteString.charAt(i)
+            }
             
             // Notennamen erfassen (A-G, a-g)
             if ('ABCDEFGabcdefg'.indexOf(char) >= 0) {
                 noteName = char
                 i++
                 
-                // Vorzeichen erfassen (# für Kreuz, b für Be)
-                if (i < noteString.length && (noteString.charAt(i) == '#' || noteString.charAt(i) == 'b')) {
-                    noteName += noteString.charAt(i)
+                // Weitere Vorzeichen erfassen (# für Kreuz, b für Be) - nur wenn nicht bereits explizit gesetzt
+                if (accidental == '' && i < noteString.length && (noteString.charAt(i) == '#' || noteString.charAt(i) == 'b')) {
+                    accidental = noteString.charAt(i)
                     i++
                 }
                 
@@ -127,8 +144,8 @@ namespace AMBAR {
                     }
                 }
                 
-                // Frequenz berechnen mit Tonart-Anpassung und senden
-                let frequency = noteToFrequencyWithKey(noteName, octave, key)
+                // Frequenz berechnen mit Tonart-Anpassung und expliziten Vorzeichen
+                let frequency = noteToFrequencyWithKey(noteName + accidental, octave, key)
                 let noteDuration = Math.round(baseDuration * baseNoteFraction * duration)
                 
                 sendNumber(frequency, channel)
@@ -156,7 +173,7 @@ namespace AMBAR {
             case DefaultNoteLength.Sixteenth:
                 return 0.25     // Sechzehntelnote = 1/4 Viertelnote
             default:
-                return 0.25     // Standard: Sechzehntelnote
+                return 1        // Standard: Viertelnote
         }
     }
 
@@ -198,15 +215,18 @@ namespace AMBAR {
             default: return 0
         }
         
-        // Vorzeichen anwenden
+        // Explizite Vorzeichen haben Vorrang vor Tonart-Vorzeichen
         if (accidental == '#') {
             baseFreq *= 1.059463  // Halbton höher
         } else if (accidental == 'b') {
             baseFreq /= 1.059463  // Halbton tiefer
+        } else if (accidental == '=') {
+            // Auflösungszeichen - keine Änderung der Grundfrequenz
+            // Tonart-Vorzeichen werden ignoriert
+        } else {
+            // Nur wenn kein explizites Vorzeichen: Tonart-Anpassung anwenden
+            baseFreq = applyKeySignature(baseNote, baseFreq, key)
         }
-        
-        // Tonart-Anpassung anwenden
-        baseFreq = applyKeySignature(baseNote, baseFreq, key)
         
         // Oktave anpassen (jede Oktave verdoppelt/halbiert die Frequenz)
         let octaveMultiplier = Math.pow(2, octave - 4)
