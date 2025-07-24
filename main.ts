@@ -302,12 +302,12 @@ namespace AMBAR {
      * Aufzählungstyp für Standard-Notenlängen
      */
     export enum DefaultNoteLength {
+        //% block="1/4"
+        Quarter,
         //% block="1/16"
         Sixteenth,
         //% block="1/8"
         Eighth,
-        //% block="1/4"
-        Quarter,
         //% block="1/2"
         Half,
         //% block="1/1"
@@ -336,10 +336,10 @@ namespace AMBAR {
      * Aufzählungstyp für Tonarten
      */
     export enum Key {
-        //% block="C-Dur"
-        C,
         //% block="G-Dur"
         G,
+        //% block="C-Dur"
+        C,
         //% block="D-Dur"
         D,
         //% block="A-Dur"
