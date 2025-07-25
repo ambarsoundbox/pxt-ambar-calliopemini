@@ -1,4 +1,10 @@
 namespace AMBAR {
+    // Globale Variablen für manuelles Tempo
+    let manualNoteIndex = 0
+    let manualNoteString = ""
+    let manualKey = Key.G
+    let manualChannel = Channel.A
+
     /**
      * Sende eine Zahl über die serielle Schnittstelle im AMBAR-Format.
      * @param value die Zahl, die gesendet werden soll
@@ -46,7 +52,7 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v12) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v13) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
@@ -61,6 +67,152 @@ namespace AMBAR {
         
         // Parse und spiele Noten mit Tonart-Anpassung
         parseAndPlayNotes(notes, beatDuration, channel, key, timeSignature, defaultNoteLength)
+    }
+
+    /**
+     * ABC manuelles Tempo - spielt jeweils eine Note bei jedem Aufruf
+     * @param channel der Kanal (A-E) über den gesendet wird
+     * @param key die Tonart
+     * @param notes die Noten in ABC-Notation
+     */
+    //% block="ABC manuelles Tempo an Kanal %channel Tonart %key Noten %notes"
+    //% key.defl=Key.G
+    //% notes.defl="|:GABc dedB|dedB dedB|c2ec B2dB|c2A2 A2BA|GABc dedB|dedB dedB|c2ec B2dB|A2F2 G4:||:g2gf gdBd|g2f2 e2d2|c2ec B2dB|c2A2 A2df|g2gf g2Bd|g2f2 e2d2|c2ec B2dB|A2F2 G4:|"
+    //% color=#cd7f32 weight=70
+    export function playABCManualTempo(channel: Channel, key: Key, notes: string): void {
+        serial.setBaudRate(BaudRate.BaudRate57600)
+        
+        // Wenn neue Parameter, dann Index zurücksetzen
+        if (manualNoteString != notes || manualKey != key || manualChannel != channel) {
+            manualNoteIndex = 0
+            manualNoteString = notes
+            manualKey = key
+            manualChannel = channel
+        }
+        
+        // Spiele die nächste Note
+        let frequency = getNextNoteFrequency()
+        if (frequency > 0) {
+            sendNumber(frequency, channel)
+        }
+    }
+
+    /**
+     * ABC-Ton beenden - sendet 0 über WebSerial
+     * @param channel der Kanal (A-E) über den gesendet wird
+     */
+    //% block="ABC-Ton beenden an Kanal %channel"
+    //% color=#cd7f32 weight=60
+    export function stopABCTone(channel: Channel): void {
+        serial.setBaudRate(BaudRate.BaudRate57600)
+        sendNumber(0, channel)
+    }
+
+    // Hilfsfunktion: Hole die nächste Note und erhöhe den Index
+    function getNextNoteFrequency(): number {
+        if (manualNoteIndex >= manualNoteString.length) {
+            // Ende erreicht, Index zurücksetzen
+            manualNoteIndex = 0
+            return 0
+        }
+
+        let i = manualNoteIndex
+        
+        // Überspringe Balken und andere Zeichen
+        while (i < manualNoteString.length) {
+            let char = manualNoteString.charAt(i)
+            if (char != '|' && char != ':' && char != ' ') {
+                break
+            }
+            i++
+        }
+        
+        if (i >= manualNoteString.length) {
+            manualNoteIndex = 0
+            return 0
+        }
+        
+        // Note parsen
+        let noteName = ''
+        let octave = 0
+        let accidental = ''
+        let char = manualNoteString.charAt(i)
+        
+        // Prüfe auf explizite Vorzeichen vor der Note
+        if (char == '^') {
+            accidental = '#'  // Kreuz
+            i++
+            if (i >= manualNoteString.length) {
+                manualNoteIndex = 0
+                return 0
+            }
+            char = manualNoteString.charAt(i)
+        } else if (char == '=') {
+            accidental = '='  // Auflösungszeichen
+            i++
+            if (i >= manualNoteString.length) {
+                manualNoteIndex = 0
+                return 0
+            }
+            char = manualNoteString.charAt(i)
+        } else if (char == '_') {
+            accidental = 'b'  // Be
+            i++
+            if (i >= manualNoteString.length) {
+                manualNoteIndex = 0
+                return 0
+            }
+            char = manualNoteString.charAt(i)
+        }
+        
+        // Notennamen erfassen (A-G, a-g)
+        if ('ABCDEFGabcdefg'.indexOf(char) >= 0) {
+            noteName = char
+            i++
+            
+            // Weitere Vorzeichen erfassen (# für Kreuz, b für Be)
+            if (accidental == '' && i < manualNoteString.length && (manualNoteString.charAt(i) == '#' || manualNoteString.charAt(i) == 'b')) {
+                accidental = manualNoteString.charAt(i)
+                i++
+            }
+            
+            // Oktave bestimmen
+            if (char >= 'A' && char <= 'G') {
+                octave = 4  // Mittlere Oktave
+            } else {
+                octave = 5  // Höhere Oktave für kleine Buchstaben
+            }
+            
+            // Zusätzliche Oktav-Markierungen
+            while (i < manualNoteString.length && manualNoteString.charAt(i) == '\'') {
+                octave++
+                i++
+            }
+            while (i < manualNoteString.length && manualNoteString.charAt(i) == ',') {
+                octave--
+                i++
+            }
+            
+            // Notenlänge überspringen (für manuelles Tempo irrelevant)
+            if (i < manualNoteString.length && manualNoteString.charAt(i) >= '0' && manualNoteString.charAt(i) <= '9') {
+                i++
+            } else if (i < manualNoteString.length && manualNoteString.charAt(i) == '/') {
+                i++
+                if (i < manualNoteString.length && manualNoteString.charAt(i) >= '0' && manualNoteString.charAt(i) <= '9') {
+                    i++
+                }
+            }
+            
+            // Index für nächsten Aufruf setzen
+            manualNoteIndex = i
+            
+            // Frequenz berechnen
+            return noteToFrequencyWithKey(noteName + accidental, octave, manualKey)
+        } else {
+            // Unbekanntes Zeichen, überspringe es
+            manualNoteIndex = i + 1
+            return getNextNoteFrequency()  // Rekursiver Aufruf für nächstes Zeichen
+        }
     }
 
     // Hilfsfunktion: Parse und spiele die Noten
