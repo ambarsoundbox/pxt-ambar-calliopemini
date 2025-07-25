@@ -1,4 +1,86 @@
 namespace AMBAR {
+    /**
+     * Aufzählungstyp für die Kanäle A-E
+     */
+    export enum Channel {
+      //% block="A"
+      A,
+      //% block="B"
+      B,
+      //% block="C"
+      C,
+      //% block="D"
+      D,
+      //% block="E"
+      E
+    }
+
+    /**
+     * Aufzählungstyp für Standard-Notenlängen
+     */
+    export enum DefaultNoteLength {
+        //% block="1/4"
+        Quarter,
+        //% block="1/16"
+        Sixteenth,
+        //% block="1/8"
+        Eighth,
+        //% block="1/2"
+        Half,
+        //% block="1/1"
+        Whole
+    }
+
+    /**
+     * Aufzählungstyp für Taktarten
+     */
+    export enum TimeSignature {
+        //% block="4/4"
+        FourFour,
+        //% block="3/4"
+        ThreeFour,
+        //% block="2/4"
+        TwoFour,
+        //% block="6/8"
+        SixEight,
+        //% block="9/8"
+        NineEight,
+        //% block="12/8"
+        TwelveEight
+    }
+
+    /**
+     * Aufzählungstyp für Tonarten
+     */
+    export enum Key {
+        //% block="G-Dur"
+        G,
+        //% block="C-Dur"
+        C,
+        //% block="D-Dur"
+        D,
+        //% block="A-Dur"
+        A,
+        //% block="E-Dur"
+        E,
+        //% block="H-Dur"
+        B,
+        //% block="Fis-Dur"
+        FSharp,
+        //% block="F-Dur"
+        F,
+        //% block="B-Dur"
+        BFlat,
+        //% block="Es-Dur"
+        EFlat,
+        //% block="As-Dur"
+        AFlat,
+        //% block="Des-Dur"
+        DFlat,
+        //% block="Ges-Dur"
+        GFlat
+    }
+
     // Globale Variablen für manuelles Tempo
     let manualNoteIndex = 0
     let manualNoteString = ""
@@ -52,7 +134,7 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v13) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v14) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
@@ -432,87 +514,5 @@ namespace AMBAR {
     function channelToLetter(ch: Channel): string {
         const letters = ["a", "b", "c", "d", "e"]
         return letters[ch] || "a"
-    }
-
-    /**
-     * Aufzählungstyp für die Kanäle A-E
-     */
-    export enum Channel {
-      //% block="A"
-      A,
-      //% block="B"
-      B,
-      //% block="C"
-      C,
-      //% block="D"
-      D,
-      //% block="E"
-      E
-    }
-
-    /**
-     * Aufzählungstyp für Standard-Notenlängen
-     */
-    export enum DefaultNoteLength {
-        //% block="1/4"
-        Quarter,
-        //% block="1/16"
-        Sixteenth,
-        //% block="1/8"
-        Eighth,
-        //% block="1/2"
-        Half,
-        //% block="1/1"
-        Whole
-    }
-
-    /**
-     * Aufzählungstyp für Taktarten
-     */
-    export enum TimeSignature {
-        //% block="4/4"
-        FourFour,
-        //% block="3/4"
-        ThreeFour,
-        //% block="2/4"
-        TwoFour,
-        //% block="6/8"
-        SixEight,
-        //% block="9/8"
-        NineEight,
-        //% block="12/8"
-        TwelveEight
-    }
-
-    /**
-     * Aufzählungstyp für Tonarten
-     */
-    export enum Key {
-        //% block="G-Dur"
-        G,
-        //% block="C-Dur"
-        C,
-        //% block="D-Dur"
-        D,
-        //% block="A-Dur"
-        A,
-        //% block="E-Dur"
-        E,
-        //% block="H-Dur"
-        B,
-        //% block="Fis-Dur"
-        FSharp,
-        //% block="F-Dur"
-        F,
-        //% block="B-Dur"
-        BFlat,
-        //% block="Es-Dur"
-        EFlat,
-        //% block="As-Dur"
-        AFlat,
-        //% block="Des-Dur"
-        DFlat,
-        //% block="Ges-Dur"
-        GFlat
     }
 }
