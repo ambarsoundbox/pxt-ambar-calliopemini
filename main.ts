@@ -82,7 +82,7 @@ namespace AMBAR {
     }
 
     // Konstanten für bessere Wartbarkeit
-    const BAUD_RATE = BaudRate.BaudRate57600
+    const BAUD_RATE = BaudRate.BaudRate115200
     const NOTE_GAP_MS = 50
     const START_MARKER = "s"
     const END_MARKER = "e"
@@ -178,7 +178,7 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v15) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v16) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
