@@ -82,7 +82,7 @@ namespace AMBAR {
     }
 
     // Konstanten für bessere Wartbarkeit
-    const BAUD_RATE = BaudRate.BaudRate115200
+    const BAUD_RATE = 115200
     const NOTE_GAP_MS = 50
     const START_MARKER = "s"
     const END_MARKER = "e"
