@@ -178,7 +178,7 @@ namespace AMBAR {
      * @param tempo das Tempo in BPM
      * @param notes die Noten in ABC-Notation
      */
-    //% block="ABC-Notation (v16) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
+    //% block="ABC-Notation (v17) an Kanal %channel Taktart %timeSignature Tonart %key Standard-Notenlänge %defaultNoteLength Tempo %tempo Noten %notes"
     //% tempo.min=60 tempo.max=200 tempo.defl=120
     //% timeSignature.defl=TimeSignature.FourFour
     //% key.defl=Key.G
